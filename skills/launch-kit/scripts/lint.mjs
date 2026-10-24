@@ -40,7 +40,10 @@ export function lintExtension(dir, stores = STORES) {
     return { errors: [`manifest.json isn't valid JSON: ${e.message}`], warnings, notes, manifest: null };
   }
 
-  const files = walk(dir);
+  // a project folder that is also the extension (no build step): what git and npm keep there isn't uploaded
+  const checkout = existsSync(join(dir, '.git'));
+  const files = walk(dir, dir, checkout ? new Set(['.git', 'node_modules']) : new Set());
+  if (checkout) notes.push('This is a project folder: .git and node_modules were skipped. Lint the zip you actually upload to be sure what it contains.');
   const has = (p) => p && existsSync(join(dir, p));
 
   // ---- identity ----
@@ -155,10 +158,11 @@ function referencedFiles(m) {
   return [...new Set(out)];
 }
 
-function walk(dir, base = dir) {
+function walk(dir, base = dir, skip = new Set()) {
   const out = [];
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
+    if (dir === base && skip.has(name)) continue;
     if (statSync(p).isDirectory()) out.push(...walk(p, base));
     else out.push(relative(base, p));
   }

@@ -105,3 +105,12 @@ test('Firefox: Chrome-only APIs and minified code are flagged', () => {
 test('the short_name warning is Edge\'s only', () => {
   assert.equal(lintExtension(ext({ short_name: 'Invisible Ink' }), ['chrome', 'firefox']).warnings.filter((w) => w.includes('short_name')).length, 0);
 });
+
+test('a project folder\'s .git and node_modules are skipped, but not inside a package', () => {
+  const dir = ext({}, { '.git/HEAD': 'ref', 'node_modules/x/index.js': '' });
+  const r = lintExtension(dir, ['chrome']);
+  assert.deepEqual(r.errors, []);
+  assert.ok(r.notes.some((n) => n.includes('project folder')));
+  const packed = lintExtension(ext({}, { 'lib/node_modules/x.js': '' }), ['chrome']);
+  assert.ok(packed.errors.some((e) => e.includes('node_modules')));
+});
