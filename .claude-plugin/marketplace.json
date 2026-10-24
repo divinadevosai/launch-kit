@@ -1,0 +1,15 @@
+{
+  "name": "swe3we",
+  "description": "Plugins by SWE3WE for shipping software: Launch kit gets a browser extension ready for the Chrome Web Store and Edge Add-ons.",
+  "owner": {
+    "name": "SWE3WE",
+    "url": "https://swe3we.dev"
+  },
+  "plugins": [
+    {
+      "name": "launch-kit",
+      "source": "./",
+      "description": "Get a browser extension ready for the Chrome Web Store and Edge Add-ons, from pre-flight check to promo video."
+    }
+  ]
+}

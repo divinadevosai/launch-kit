@@ -1,0 +1,159 @@
+{
+  "name": "Loci",
+  "extension": "../dist",
+  "out": ".",
+  "shots": [
+    {
+      "name": "welcome",
+      "open": "extension:palace.html",
+      "settle": 1200
+    },
+    {
+      "name": "palace",
+      "open": "extension:palace.html",
+      "steps": [
+        {
+          "click": "#try"
+        },
+        {
+          "wait": 2500
+        }
+      ]
+    },
+    {
+      "name": "search",
+      "open": "extension:palace.html",
+      "steps": [
+        {
+          "click": "#try"
+        },
+        {
+          "wait": 2000
+        },
+        {
+          "click": "#search"
+        },
+        {
+          "eval": "const s=document.querySelector('#search'); s.value='banana'; s.dispatchEvent(new Event('input',{bubbles:true}))"
+        },
+        {
+          "wait": 1200
+        }
+      ]
+    }
+  ],
+  "brand": {
+    "name": "Loci",
+    "tagline": "Your week, as a *place*.",
+    "logo": "../dist/icons/128.png",
+    "by": "SWE3WE",
+    "colors": {
+      "bg": "#f4eee3",
+      "ink": "#2a2119",
+      "accent": "#a9852f",
+      "deep": "#1f2a44",
+      "accentOnDeep": "#e3c06a"
+    },
+    "fonts": {
+      "display": "../dist/fonts/cormorant-600.woff2",
+      "displayItalic": "../dist/fonts/cormorant-500-italic.woff2",
+      "displayWeight": 600
+    },
+    "logoLarge": "logo.svg"
+  },
+  "store": {
+    "tile": {
+      "headline": "Loci",
+      "text": "Your browsing, as a memory *palace*."
+    },
+    "screenshots": [
+      {
+        "shot": "palace",
+        "layout": "full"
+      },
+      {
+        "shot": "palace",
+        "layout": "feature",
+        "headline": "Every week becomes a *building*.",
+        "text": "One room for each thing you were doing, joined by doorways in the order you did them.",
+        "crop": [
+          330,
+          60,
+          950,
+          640
+        ]
+      },
+      {
+        "shot": "search",
+        "layout": "feature",
+        "headline": "Where did I *see* that?",
+        "text": "Search, and fly straight to the room. Your history stays on your computer.",
+        "crop": [
+          0,
+          0,
+          640,
+          400
+        ]
+      }
+    ]
+  },
+  "video": {
+    "sound": true,
+    "scenes": [
+      {
+        "title": "Your browser history is a *list*.",
+        "seconds": 2.6
+      },
+      {
+        "title": "Lists are what memory is *worst* at.",
+        "seconds": 2.6
+      },
+      {
+        "shot": "welcome",
+        "caption": "Loci turns it into a *building*.",
+        "seconds": 3.5,
+        "zoom": [
+          1,
+          1.05
+        ],
+        "focus": [
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "shot": "palace",
+        "caption": "One room for each thing you were *doing*.",
+        "seconds": 4.5,
+        "zoom": [
+          1,
+          1.12
+        ],
+        "focus": [
+          0.55,
+          0.45
+        ]
+      },
+      {
+        "shot": "search",
+        "caption": "Where did I see that? *Search and fly there.*",
+        "seconds": 4,
+        "zoom": [
+          1.02,
+          1.12
+        ],
+        "focus": [
+          0.15,
+          0.25
+        ]
+      },
+      {
+        "end": {
+          "text": "Your browsing, as a memory *palace*.",
+          "meta": "Free for Edge \u00b7 built on your computer \u00b7 nothing leaves it"
+        },
+        "seconds": 4
+      }
+    ]
+  }
+}

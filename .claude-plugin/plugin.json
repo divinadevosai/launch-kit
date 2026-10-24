@@ -1,0 +1,9 @@
+{
+  "name": "launch-kit",
+  "version": "0.1.0",
+  "description": "Get a browser extension ready for the Chrome Web Store and Edge Add-ons: a pre-flight check for what stores reject, real screenshots, store images, listing text, privacy answers and policy, and a promo video.",
+  "author": { "name": "SWE3WE" },
+  "homepage": "https://github.com/divinadevosai/launch-kit",
+  "license": "MIT",
+  "keywords": ["browser-extension", "chrome-web-store", "edge-add-ons", "launch", "screenshots", "promo-video"]
+}

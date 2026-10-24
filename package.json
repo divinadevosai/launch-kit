@@ -1,0 +1,9 @@
+{
+  "name": "launch-kit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A Claude Code plugin that takes a browser extension from build to store submission.",
+  "scripts": { "test": "node --test tests/*.test.mjs" },
+  "license": "MIT"
+}

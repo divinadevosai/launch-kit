@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>launch-kit frames</title>
+<!-- Every store image and video card is drawn here from launch.json's "brand". stills.mjs and video.mjs
+     load this page, call render(kind, options) and screenshot #frame. -->
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  html, body { background: transparent; }
+  #frame { position: relative; overflow: hidden; color: var(--ink); font-family: var(--body); }
+  .bg { background: radial-gradient(120% 90% at 85% 0%, var(--glow), transparent 60%), var(--bg); }
+  .dark { color: var(--on-deep); background: radial-gradient(120% 90% at 85% 0%, color-mix(in srgb, var(--accent) 28%, var(--deep)), var(--deep) 65%); }
+  .display { font-family: var(--display); font-weight: var(--display-weight); letter-spacing: -0.015em; line-height: 1; }
+  .display em { font-style: italic; color: var(--accent); }
+  .dark .display em { color: var(--accent-on-deep); }
+  .kicker { display: flex; align-items: center; gap: 12px; font-size: 17px; letter-spacing: .14em; text-transform: uppercase; opacity: .7; }
+  .kicker img { width: 30px; height: 30px; border-radius: 7px; }
+  .body { font-size: 22px; line-height: 1.55; opacity: .85; }
+
+  /* screenshots */
+  .full img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .feature { display: grid; grid-template-columns: 440px 1fr; gap: 56px; align-items: center; padding-left: 80px; }
+  .feature .text { display: grid; gap: 24px; }
+  .feature h1 { font-size: 76px; }
+  .shot { position: relative; height: 620px; border-radius: 14px; overflow: hidden; background-repeat: no-repeat;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 30px 80px -20px rgba(0,0,0,.45); }
+
+  /* logo and tile */
+  .logo img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  .tile { display: grid; align-content: center; gap: 8px; padding: 0 34px; }
+  .tile img { width: 64px; height: 64px; border-radius: 14px; margin-bottom: 6px; }
+  .tile h1 { font-size: 54px; }
+  .tile p { font: 400 30px/1.15 var(--display); opacity: .9; }
+
+  /* video */
+  .cap { position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%); max-width: 1600px; padding: 18px 30px 20px; border-radius: 14px; white-space: nowrap;
+    background: rgba(12, 10, 16, .84); color: #f4f0fa; font: 500 38px var(--body); box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 20px 60px rgba(0,0,0,.45); }
+  .cap em { font-style: normal; color: var(--accent-on-deep); }
+  .card { display: grid; place-content: center; justify-items: center; text-align: center; gap: 22px; padding: 0 160px; }
+  .card img { width: 140px; height: 140px; border-radius: 30px; }
+  .card h1 { font-size: 130px; }
+  .card p { font-size: 34px; opacity: .85; }
+  .card .meta { font-size: 22px; letter-spacing: .04em; opacity: .65; margin-top: 10px; }
+  .card .by { position: absolute; left: 0; right: 0; bottom: 50px; font-size: 18px; letter-spacing: .4em; text-transform: uppercase; opacity: .5; }
+</style>
+</head>
+<body>
+<div id="frame"></div>
+<script>
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  // *word* → italic accent; the only formatting launch.json text gets
+  const rich = (s) => esc(s).replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+  // brand: { name, logo, colors: { bg, ink, accent, deep }, fonts: { display, displayItalic, body, displayWeight } }
+  window.setBrand = async (brand) => {
+    const c = brand.colors ?? {};
+    const root = document.documentElement.style;
+    const set = (k, v) => root.setProperty(k, v);
+    set('--bg', c.bg ?? '#f6f3ee');
+    set('--ink', c.ink ?? '#1d1a16');
+    set('--accent', c.accent ?? '#c2410c');
+    set('--deep', c.deep ?? '#141019');
+    set('--on-deep', c.onDeep ?? '#f4f0fa');
+    set('--accent-on-deep', c.accentOnDeep ?? c.accent ?? '#f59e0b');
+    set('--glow', `color-mix(in srgb, ${c.accent ?? '#c2410c'} 14%, transparent)`);
+    const f = brand.fonts ?? {};
+    const faces = [];
+    if (f.display) faces.push(new FontFace('LK Display', `url(${f.display})`, { weight: String(f.displayWeight ?? 400) }));
+    if (f.displayItalic) faces.push(new FontFace('LK Display', `url(${f.displayItalic})`, { style: 'italic', weight: String(f.displayWeight ?? 400) }));
+    if (f.body) faces.push(new FontFace('LK Body', `url(${f.body})`));
+    for (const face of faces) document.fonts.add(await face.load());
+    set('--display', `'LK Display', ${f.displayFallback ?? 'Georgia, serif'}`);
+    set('--display-weight', String(f.displayWeight ?? 400));
+    set('--body', `'LK Body', ${f.bodyFallback ?? 'system-ui, -apple-system, Segoe UI, sans-serif'}`);
+    window.brand = brand;
+  };
+
+  // kinds: logo · tile · full · feature · caption · title · end
+  window.render = (kind, o = {}) => {
+    const b = window.brand;
+    const el = document.getElementById('frame');
+    const size = { logo: [300, 300], tile: [440, 280] }[kind] ?? [o.width ?? 1280, o.height ?? 800];
+    el.style.width = `${size[0]}px`;
+    el.style.height = `${size[1]}px`;
+    const kicker = `<div class="kicker"><img src="${esc(b.logo)}" alt="">${esc(b.name)}</div>`;
+    const html = {
+      logo: () => `<div class="logo" style="width:100%;height:100%"><img src="${esc(b.logoLarge ?? b.logo)}" alt=""></div>`,
+      tile: () => `<div class="tile dark" style="height:100%"><img src="${esc(b.logo)}" alt=""><h1 class="display">${rich(o.headline ?? b.name)}</h1><p>${rich(o.text ?? b.tagline)}</p></div>`,
+      full: () => `<div class="full" style="height:100%"><img src="${esc(o.shot)}" alt=""></div>`,
+      // crop: [x, y, w, h] of the 1× shot to fill the frame (fitted after layout, below)
+      feature: () => `<div class="feature ${o.dark ? 'dark' : 'bg'}" style="height:100%"><div class="text">${kicker}<h1 class="display">${rich(o.headline)}</h1><p class="body">${rich(o.text)}</p></div>
+          <div class="shot" style="background-image:url(${esc(o.shot)})"></div></div>`,
+      caption: () => `<div class="cap">${rich(o.text)}</div>`,
+      title: () => `<div class="card ${o.light ? 'bg' : 'dark'}" style="height:100%"><h1 class="display" style="font-size:${o.size ?? 110}px">${rich(o.text)}</h1></div>`,
+      end: () => `<div class="card dark" style="height:100%"><img src="${esc(b.logoLarge ?? b.logo)}" alt=""><h1 class="display">${rich(o.headline ?? b.name)}</h1><p>${rich(o.text ?? b.tagline)}</p>${o.meta ? `<p class="meta">${rich(o.meta)}</p>` : ''}${b.by ? `<div class="by">${esc(b.by)}</div>` : ''}</div>`,
+    }[kind];
+    if (!html) throw new Error(`unknown frame kind ${kind}`);
+    el.innerHTML = html();
+    const shotBox = el.querySelector('.shot');
+    if (shotBox) {
+      // cover the frame with the crop, never showing past the screenshot's edges
+      const [x, y, w, h] = o.crop ?? [0, 0, 1280, 800];
+      const r = shotBox.getBoundingClientRect();
+      const k = Math.max(r.width / w, r.height / h);
+      const left = Math.min(0, Math.max(r.width - 1280 * k, -x * k));
+      const top = Math.min(0, Math.max(r.height - 800 * k, -y * k));
+      Object.assign(shotBox.style, { backgroundSize: `${1280 * k}px ${800 * k}px`, backgroundPosition: `${left}px ${top}px` });
+    }
+    return Promise.all([...el.querySelectorAll('img')].map((i) => i.decode().catch(() => {})));
+  };
+</script>
+</body>
+</html>
