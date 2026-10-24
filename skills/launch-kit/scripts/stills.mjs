@@ -1,12 +1,13 @@
 #!/usr/bin/env node
-// Store images from launch.json: the 300×300 logo, the 440×280 promo tile and 1280×800 screenshots.
+// Store images from launch.json: Edge's 300×300 logo, Chrome's 128×128 store icon, the 440×280 promo tile,
+// Chrome's optional 1400×560 marquee, and 1280×800 screenshots (Firefox takes the same screenshots).
 // node stills.mjs <launch.json>  → <out>/store/*.png      (run shoot.mjs first: screenshots come from <out>/shots)
 //
 // launch.json additions:
 // "brand": { "name": "Loci", "tagline": "Your week, as a *place*.", "logo": "../src/icons/128.png", "logoLarge": "logo.svg",
 //            "by": "SWE3WE", "colors": { "bg": "#f4eee3", "ink": "#2a2119", "accent": "#a9852f", "deep": "#1f2a44" },
 //            "fonts": { "display": "../dist/fonts/x.woff2", "displayItalic": "…", "body": "…", "displayWeight": 600 } },
-// "store": { "tile": { "headline": "…", "text": "…" },
+// "store": { "tile": { "headline": "…", "text": "…" }, "marquee": { "shot": "palace", "crop": [300, 0, 980, 620] },
 //            "screenshots": [ { "shot": "palace", "layout": "full" },
 //                             { "shot": "search", "layout": "feature", "headline": "Where did I *see* that?", "text": "…", "crop": [0, 0, 640, 400] } ] }
 import { mkdirSync, readFileSync } from 'node:fs';
@@ -55,7 +56,10 @@ export async function stills(configPath) {
   const made = [];
   if (!config.brand?.logoLarge) console.warn('! brand.logoLarge is not set: the 300×300 logo is scaled up from brand.logo and may look soft. Point it at an SVG or a PNG of 300px or more.');
   made.push(await f.frame('logo', {}, join(store, 'logo-300x300.png'), true));
+  made.push(await f.frame('storeicon', {}, join(store, 'chrome-icon-128x128.png'), true));
   made.push(await f.frame('tile', config.store?.tile ?? {}, join(store, 'promo-440x280.png')));
+  const mq = config.store?.marquee;
+  if (mq) made.push(await f.frame('marquee', { ...mq, shot: shot(mq.shot, true) }, join(store, 'marquee-1400x560.png')));
   let n = 0;
   for (const s of config.store?.screenshots ?? []) {
     n++;

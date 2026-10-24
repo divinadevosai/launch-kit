@@ -95,7 +95,18 @@
           400
         ]
       }
-    ]
+    ],
+    "marquee": {
+      "shot": "palace",
+      "headline": "Loci",
+      "text": "Your browsing, as a memory *palace*.",
+      "crop": [
+        330,
+        60,
+        950,
+        640
+      ]
+    }
   },
   "video": {
     "sound": true,

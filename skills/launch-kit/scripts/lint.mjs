@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Store pre-flight for a Manifest V3 browser extension: the checks the Chrome Web Store and Edge Add-ons
-// reject or warn on, run before you upload instead of after a review.
-// node lint.mjs <built extension folder or .zip> [--json]
-// Exit code 1 if anything would be rejected.
+// Store pre-flight for a Manifest V3 browser extension: the checks the Chrome Web Store, Edge Add-ons and
+// Firefox Add-ons (AMO) reject or warn on, run before you upload instead of after a review.
+// node lint.mjs <built extension folder or .zip> [--store chrome,edge,firefox] [--json]
+// Messages for one store only are prefixed with it. Exit code 1 if anything would be rejected.
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -19,8 +19,12 @@ const API = {
 };
 const BROAD_HOSTS = new Set(['<all_urls>', '*://*/*', 'http://*/*', 'https://*/*']);
 
-/** Lint an unpacked extension folder. Returns { errors, warnings, notes, manifest }. */
-export function lintExtension(dir) {
+// Chrome APIs Firefox doesn't have
+const NOT_IN_FIREFOX = { offscreen: 'Firefox has no offscreen documents; its background page is a real page, so do the work there.', sidePanel: 'Firefox has sidebar_action instead of sidePanel.' };
+export const STORES = ['chrome', 'edge', 'firefox'];
+
+/** Lint an unpacked extension folder for the given stores. Returns { errors, warnings, notes, manifest }. */
+export function lintExtension(dir, stores = STORES) {
   const errors = [];
   const warnings = [];
   const notes = [];
@@ -44,7 +48,7 @@ export function lintExtension(dir) {
   const msg = (s) => (typeof s === 'string' && s.startsWith('__MSG_') ? null : s);
   if (!m.name) err('name is missing.');
   else if (msg(m.name) && m.name.length > 75) err(`name is ${m.name.length} characters; the limit is 75.`);
-  if (m.short_name && msg(m.short_name) && m.short_name.length > 12) warn(`short_name "${m.short_name}" is ${m.short_name.length} characters; Edge warns above 12. Shorten it or remove it (the name is used instead).`);
+  if (stores.includes('edge') && m.short_name && msg(m.short_name) && m.short_name.length > 12) warn(`Edge: ` + `short_name "${m.short_name}" is ${m.short_name.length} characters; Edge warns above 12. Shorten it or remove it (the name is used instead).`);
   if (!m.description) err('description is missing; the stores show it as the short description.');
   else if (msg(m.description) && m.description.length > 132) err(`description is ${m.description.length} characters; the limit is 132.`);
   if (!/^\d{1,5}(\.\d{1,5}){0,3}$/.test(m.version ?? '') || String(m.version).split('.').some((n) => +n > 65535)) err(`version "${m.version}" must be 1–4 dot-separated numbers, each 0–65535.`);
@@ -98,11 +102,32 @@ export function lintExtension(dir) {
   for (const w of m.web_accessible_resources ?? []) if ((w.matches ?? []).some((h) => BROAD_HOSTS.has(h)) && !w.use_dynamic_url) warn('web_accessible_resources are open to every site, which lets any page detect the extension. Narrow "matches" or set use_dynamic_url.');
   if (perms.includes('tabs') && !/\.(url|title|favIconUrl)\b/.test(allCode)) warn('"tabs" only adds access to tab URLs and titles; the tabs API works without it. Remove it if you don\'t read tab.url or tab.title.');
 
+  if (stores.includes('firefox')) firefoxChecks(m, files, read, code, perms, err, warn);
+  if (stores.includes('chrome')) notes.push('Chrome: the store icon is a separate 128×128 PNG upload whose artwork should be 96×96 with 16px of transparent padding (stills.mjs makes it).');
+
   notes.push(`Permissions to justify in the listing: ${[...perms, ...optional.map((p) => `${p} (optional)`), ...new Set(hosts)].join(', ') || 'none'}.`);
   const size = files.reduce((n, f) => n + statSync(join(dir, f)).size, 0);
   notes.push(`${files.length} files, ${(size / 1024 / 1024).toFixed(2)} MB unpacked.`);
   if (size > 100 * 1024 * 1024) warn('The package is over 100 MB, which is slow to review and to install.');
   return { errors, warnings, notes, manifest: m };
+}
+
+function firefoxChecks(m, files, read, code, perms, err, warn) {
+  const ff = (s) => `Firefox: ${s}`;
+  const gecko = m.browser_specific_settings?.gecko ?? {};
+  if (!gecko.id) err(ff('no add-on ID. Manifest V3 add-ons need a fixed one in browser_specific_settings.gecko.id, like "name@yourdomain" (Chrome ignores the key). package.mjs adds it to a Firefox build.'));
+  if (m.background?.service_worker && !m.background?.scripts) err(ff('background.service_worker alone never runs: Firefox has no extension service workers. Add "scripts": ["' + m.background.service_worker + '"] next to it (Chrome 121+ uses service_worker and ignores scripts).'));
+  const dcp = gecko.data_collection_permissions;
+  if (!dcp) err(ff('no browser_specific_settings.gecko.data_collection_permissions. New add-ons can\'t be signed without it since November 2025. If nothing leaves the device: { "required": ["none"] }.'));
+  else {
+    if (!Array.isArray(dcp.required) || !dcp.required.length) err(ff('data_collection_permissions.required must list "none" or the kinds of data the add-on sends.'));
+    const min = parseFloat(gecko.strict_min_version ?? '0');
+    if (min < 128) warn(ff(`data_collection_permissions makes Firefox 127 and older refuse the add-on; set browser_specific_settings.gecko.strict_min_version to "128.0" (or "140.0" for Firefox's built-in consent screen). It is ${gecko.strict_min_version ? `"${gecko.strict_min_version}"` : 'not set'}.`));
+  }
+  for (const p of perms) if (NOT_IN_FIREFOX[p]) warn(ff(`"${p}": ${NOT_IN_FIREFOX[p]}`));
+  // reviewers must be able to read the code: bundled or minified files need the source and build steps uploaded too
+  const built = code.filter((f) => f.endsWith('.js') && read(f).split('\n').some((line) => line.length > 1500));
+  if (built.length) warn(ff(`${built.join(', ')} ${built.length === 1 ? 'looks' : 'look'} minified or bundled. AMO will ask for the source code, a lockfile and build instructions that use open-source tools offline; package.mjs makes the source zip.`));
 }
 
 function checkIcon(dir, path, size, label, err, warn) {
@@ -144,8 +169,14 @@ function walk(dir, base = dir) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const target = process.argv[2];
   const asJson = process.argv.includes('--json');
+  const storeArg = process.argv.find((a) => a.startsWith('--store'));
+  const stores = storeArg ? (storeArg.includes('=') ? storeArg.split('=')[1] : process.argv[process.argv.indexOf(storeArg) + 1]).split(',') : STORES;
+  if (stores.some((st) => !STORES.includes(st))) {
+    console.error(`--store takes ${STORES.join(', ')}`);
+    process.exit(2);
+  }
   if (!target) {
-    console.error('usage: node lint.mjs <built extension folder or .zip> [--json]');
+    console.error('usage: node lint.mjs <built extension folder or .zip> [--store chrome,edge,firefox] [--json]');
     process.exit(2);
   }
   let dir = target;
@@ -155,12 +186,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     execFileSync('unzip', ['-qq', target, '-d', tmp]);
     dir = tmp;
   }
-  const r = lintExtension(dir);
+  const r = lintExtension(dir, stores);
   if (tmp) rmSync(tmp, { recursive: true, force: true });
   if (asJson) console.log(JSON.stringify({ errors: r.errors, warnings: r.warnings, notes: r.notes }, null, 2));
   else {
     const name = r.manifest ? `${r.manifest.name} ${r.manifest.version}` : target;
-    console.log(`Store pre-flight: ${name}\n`);
+    console.log(`Store pre-flight: ${name} (${stores.join(', ')})\n`);
     for (const e of r.errors) console.log(`✗ ${e}`);
     for (const w of r.warnings) console.log(`! ${w}`);
     for (const n of r.notes) console.log(`· ${n}`);

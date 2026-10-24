@@ -1,9 +1,20 @@
 {
   "name": "launch-kit",
-  "version": "0.1.0",
-  "description": "Get a browser extension ready for the Chrome Web Store and Edge Add-ons: a pre-flight check for what stores reject, real screenshots, store images, listing text, privacy answers and policy, and a promo video.",
-  "author": { "name": "SWE3WE" },
+  "version": "0.2.0",
+  "description": "Get a browser extension ready for the Chrome Web Store, Edge Add-ons and Firefox Add-ons: a pre-flight check for what each store rejects, a package per store, real screenshots, store images, listing text, privacy answers and policy, and a promo video.",
+  "author": {
+    "name": "SWE3WE"
+  },
   "homepage": "https://github.com/divinadevosai/launch-kit",
   "license": "MIT",
-  "keywords": ["browser-extension", "chrome-web-store", "edge-add-ons", "launch", "screenshots", "promo-video"]
+  "keywords": [
+    "amo",
+    "browser-extension",
+    "chrome-web-store",
+    "edge-add-ons",
+    "firefox-add-ons",
+    "launch",
+    "promo-video",
+    "screenshots"
+  ]
 }

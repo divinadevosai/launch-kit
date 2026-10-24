@@ -33,6 +33,16 @@
   .tile h1 { font-size: 54px; }
   .tile p { font: 400 30px/1.15 var(--display); opacity: .9; }
 
+  /* Chrome's store icon: 96px artwork inside 16px of transparent padding */
+  .storeicon { display: grid; place-items: center; width: 100%; height: 100%; }
+  .storeicon img { width: 96px; height: 96px; object-fit: contain; }
+  /* Chrome's marquee: text left, the product right */
+  .marquee { display: grid; grid-template-columns: 560px 1fr; align-items: center; gap: 40px; padding-left: 80px; height: 100%; }
+  .marquee .text { display: grid; gap: 18px; }
+  .marquee h1 { font-size: 80px; }
+  .marquee p { font: 400 32px/1.2 var(--display); opacity: .9; }
+  .marquee .shot { height: 440px; border-radius: 12px 0 0 12px; }
+
   /* video */
   .cap { position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%); max-width: 1600px; padding: 18px 30px 20px; border-radius: 14px; white-space: nowrap;
     background: rgba(12, 10, 16, .84); color: #f4f0fa; font: 500 38px var(--body); box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 20px 60px rgba(0,0,0,.45); }
@@ -76,16 +86,19 @@
     window.brand = brand;
   };
 
-  // kinds: logo · tile · full · feature · caption · title · end
+  // kinds: logo · storeicon · tile · marquee · full · feature · caption · title · end
   window.render = (kind, o = {}) => {
     const b = window.brand;
     const el = document.getElementById('frame');
-    const size = { logo: [300, 300], tile: [440, 280] }[kind] ?? [o.width ?? 1280, o.height ?? 800];
+    const size = { logo: [300, 300], storeicon: [128, 128], tile: [440, 280], marquee: [1400, 560] }[kind] ?? [o.width ?? 1280, o.height ?? 800];
     el.style.width = `${size[0]}px`;
     el.style.height = `${size[1]}px`;
     const kicker = `<div class="kicker"><img src="${esc(b.logo)}" alt="">${esc(b.name)}</div>`;
     const html = {
       logo: () => `<div class="logo" style="width:100%;height:100%"><img src="${esc(b.logoLarge ?? b.logo)}" alt=""></div>`,
+      storeicon: () => `<div class="storeicon"><img src="${esc(b.logoLarge ?? b.logo)}" alt=""></div>`,
+      marquee: () => `<div class="marquee dark"><div class="text">${kicker}<h1 class="display">${rich(o.headline ?? b.name)}</h1><p>${rich(o.text ?? b.tagline)}</p></div>
+          <div class="shot" style="background-image:url(${esc(o.shot)})"></div></div>`,
       tile: () => `<div class="tile dark" style="height:100%"><img src="${esc(b.logo)}" alt=""><h1 class="display">${rich(o.headline ?? b.name)}</h1><p>${rich(o.text ?? b.tagline)}</p></div>`,
       full: () => `<div class="full" style="height:100%"><img src="${esc(o.shot)}" alt=""></div>`,
       // crop: [x, y, w, h] of the 1× shot to fill the frame (fitted after layout, below)

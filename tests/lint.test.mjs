@@ -30,8 +30,8 @@ function ext(manifest, files = {}) {
   return dir;
 }
 
-test('a clean extension passes', () => {
-  const r = lintExtension(ext({}));
+test('a clean extension passes for Chrome and Edge', () => {
+  const r = lintExtension(ext({}), ['chrome', 'edge']);
   assert.deepEqual(r.errors, []);
   assert.deepEqual(r.warnings, []);
 });
@@ -72,8 +72,36 @@ test('a zipped folder instead of its contents is explained', () => {
 });
 
 test('_locales is allowed at the top, nowhere else', () => {
-  const ok = lintExtension(ext({ default_locale: 'en', name: '__MSG_name__' }, { '_locales/en/messages.json': '{}' }));
+  const ok = lintExtension(ext({ default_locale: 'en', name: '__MSG_name__' }, { '_locales/en/messages.json': '{}' }), ['chrome']);
   assert.deepEqual(ok.errors, []);
   const bad = lintExtension(ext({}, { 'lib/_locales/x.json': '{}' }));
   assert.ok(bad.errors.some((e) => e.includes('lib/_locales')));
+});
+
+test('Firefox: what AMO needs that Chrome doesn\'t', () => {
+  const r = lintExtension(ext({}), ['firefox']);
+  assert.ok(r.errors.some((e) => e.includes('add-on ID')));
+  assert.ok(r.errors.some((e) => e.includes('service_worker alone')));
+  assert.ok(r.errors.some((e) => e.includes('data_collection_permissions')));
+  // Chrome and Edge don't care
+  assert.deepEqual(lintExtension(ext({}), ['chrome', 'edge']).errors, []);
+});
+
+test('Firefox: a ready manifest passes, an old minimum version is flagged', () => {
+  const gecko = { id: 'test@example.com', data_collection_permissions: { required: ['none'] }, strict_min_version: '128.0' };
+  const ok = lintExtension(ext({ background: { service_worker: 'background.js', scripts: ['background.js'] }, browser_specific_settings: { gecko } }), ['firefox']);
+  assert.deepEqual(ok.errors, []);
+  assert.deepEqual(ok.warnings, []);
+  const old = lintExtension(ext({ background: { scripts: ['background.js'] }, browser_specific_settings: { gecko: { ...gecko, strict_min_version: '115.0' } } }), ['firefox']);
+  assert.ok(old.warnings.some((w) => w.includes('strict_min_version')));
+});
+
+test('Firefox: Chrome-only APIs and minified code are flagged', () => {
+  const r = lintExtension(ext({ permissions: ['offscreen', 'storage'] }, { 'background.js': 'chrome.storage.local.get();chrome.offscreen.createDocument();' + 'x'.repeat(2000) }), ['firefox']);
+  assert.ok(r.warnings.some((w) => w.includes('offscreen documents')));
+  assert.ok(r.warnings.some((w) => w.includes('minified or bundled')));
+});
+
+test('the short_name warning is Edge\'s only', () => {
+  assert.equal(lintExtension(ext({ short_name: 'Invisible Ink' }), ['chrome', 'firefox']).warnings.filter((w) => w.includes('short_name')).length, 0);
 });
